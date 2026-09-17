@@ -12,3 +12,13 @@ def test_health_returns_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_openapi_schema_is_served() -> None:
+    client = TestClient(app)
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    assert response.json()["info"]["title"] == "URL Shortener API"
+    assert "/health" in response.json()["paths"]
