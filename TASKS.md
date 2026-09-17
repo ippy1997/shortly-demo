@@ -1,0 +1,17 @@
+# Tasks
+
+Ordered. Each is one focused change with its own tests. Requirements refer to the numbered
+items in [PRD.md](PRD.md); the design is in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+- [ ] **Project skeleton.** `pyproject.toml` (FastAPI, uvicorn, pydantic; dev extra: pytest, httpx), `app/` package with an empty `main.py` creating the FastAPI app, `tests/`, `.gitignore`. `GET /health` returns `{"status": "ok"}` with a test that asserts 200. — serves PRD Constraints (FastAPI) and requirement 9.
+- [ ] **Settings.** `app/config.py` reading `DATABASE_PATH`, `BASE_URL`, `LINK_TTL_HOURS` from the environment with the defaults in ARCHITECTURE.md; test that defaults apply and that env vars override them. — serves requirements 5 and 8.
+- [ ] **Database and schema.** `app/schema.sql` with the `links` table, `app/db.py` opening a per-request connection and applying the schema at startup; test that a fresh file gets the table and that re-opening an existing file keeps its rows. — serves requirement 8.
+- [ ] **Store layer.** `app/store.py` with `insert_link`, `get_link`, `increment_hits`, raising `AliasTaken` on a duplicate code; tests against a temp DB file for insert/read, duplicate rejection, and hit increment. — serves requirements 3, 7, 8.
+- [ ] **Codes and validation.** `app/codes.py` (7-char random code generator, reserved-word list) and `app/schemas.py` (`CreateLinkRequest` with `HttpUrl` and the `^[A-Za-z0-9_-]{3,30}$` alias pattern, `LinkResponse`); tests for generated-code shape, rejected alias shapes, and rejected reserved aliases. — serves requirements 1 and 4.
+- [ ] **Create endpoint.** `POST /links` → 201 with `{code, short_url, target_url, created_at, expires_at, hits}`; `expires_at = now + LINK_TTL_HOURS`; auto-code retry on collision. Tests: auto-code creation, custom alias creation, `"not a url"` → 422 and nothing stored, duplicate alias → 409 and nothing stored. — serves requirements 1, 3, 4, 5.
+- [ ] **Clock dependency.** `app/clock.py` exposing `now()` as a FastAPI dependency, used by the create endpoint; test that overriding it in `app.dependency_overrides` changes the `expires_at` written. — serves requirement 5 (makes expiry testable without waiting).
+- [ ] **Redirect endpoint.** `GET /{code}` → 302 to the exact `target_url`, incrementing `hits`; 404 for an unknown code. Tests: redirect target matches the submitted URL exactly, status is 302, unknown code → 404. — serves requirements 2 and 6.
+- [ ] **Expiry enforcement.** Both `GET /{code}` and the stats endpoint return 410 when `expires_at <= now()`; the redirect does not increment `hits` for an expired link. Test by overriding the clock forward 25 hours. — serves requirement 5.
+- [ ] **Stats endpoint.** `GET /links/{code}` returns the link body with the current `hits` and does not increment it; 404 unknown, 410 expired. Tests: fresh link shows 0, after three redirects shows 3. — serves requirement 7.
+- [ ] **Persistence test.** End-to-end test that creates a link against a temp DB file, disposes of the app, builds a new app on the same file, and redirects successfully through the same code with its hit count intact. — serves requirement 8.
+- [ ] **Run and prove it.** README install/run/test instructions verified end to end; `pip install -e ".[dev]"` then `pytest` passes the whole suite, and `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` serves `/health` 200, `/docs` 200, `/zzzzzzz` 404, `/links/zzzzzzz` 404, plus a manual create → follow → stats round trip. — serves requirement 9 and PRD Success.
