@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "url-shortener-api"
+version = "0.1.0"
+description = "HTTP API that turns a long URL into a short code."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "pydantic>=2.6",
+    "uvicorn>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8.0",
+]
+
+# The package lives in src/app/ on disk and imports as `app`, so the commands in
+# ARCHITECTURE.md and AGENTS.md (`app.main:app`, `from app...`) are unchanged.
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["app"]
+
+[tool.setuptools.package-data]
+app = ["*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
